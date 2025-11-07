@@ -4,7 +4,7 @@ An extension to the ERPNext Social Login authentication method (OIDC) that incor
 
 Features:
 
-- Group to Role mapping: maps the received *groups* as token claim to ERPNext roles.
+- Group to Role/Role Profile mapping: maps the received *groups* as token claim to ERPNext roles or role profiles.
 - Customizable claim names.
 - Specify the default role for the users that haven't logged in yet.
 - Automatically creates users from trusted identity providers even if signup is disabled in the site.

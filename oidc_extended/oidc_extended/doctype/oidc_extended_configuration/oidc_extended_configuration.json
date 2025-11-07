@@ -40,12 +40,12 @@
    "label": "Default Role",
    "options": "Role"
   },
-  {
-   "fieldname": "group_role_mappings",
-   "fieldtype": "Table",
-   "label": "Group To Role Mappings",
-   "options": "OIDC Group To Role Mapping"
-  },
+   {
+    "fieldname": "group_role_mappings",
+    "fieldtype": "Table",
+    "label": "Group To Role/Role Profile Mappings",
+    "options": "OIDC Group To Role Mapping"
+   },
   {
    "default": "given_name",
    "fieldname": "given_name_claim_name",

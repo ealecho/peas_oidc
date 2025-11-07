@@ -23,7 +23,7 @@ def custom(code: str, state: str | dict):
 
     This extends the functionality of the current Social Login (OIDC) module. In addition to handling the authentication over OIDC, this:
     - Creates new user if does not exsit.
-    - Maps groups from the claim of id token to ERPNext roles.
+    - Maps groups from the claim of id token to ERPNext roles or role profiles.
     """
 
     state = json.loads(base64.b64decode(state).decode("utf-8"))
@@ -159,8 +159,30 @@ def custom(code: str, state: str | dict):
 
     # The roles the user should have, after mapping the groups received in the token.
     frappe.logger().debug(f"Mapping groups to roles for user {username}.")
-    roles = [group_role_mapping.role for group_role_mapping in oidc_extended_configuration.group_role_mappings if group_role_mapping.group in groups]
-    frappe.logger().debug(f"Frappe roles mapped from token groups of user {username}: {roles}")
+    
+    # Collect mapped values (can be either Role or Role Profile names)
+    mapped_values = [group_role_mapping.role for group_role_mapping in oidc_extended_configuration.group_role_mappings if group_role_mapping.group in groups]
+    frappe.logger().debug(f"Mapped values from token groups of user {username}: {mapped_values}")
+    
+    # Expand to actual roles (handle both direct roles and role profiles)
+    roles = []
+    for value in mapped_values:
+        if frappe.db.exists("Role Profile", value):
+            # It's a Role Profile - expand it to constituent roles
+            frappe.logger().debug(f"Expanding Role Profile: {value}")
+            role_profile = frappe.get_doc("Role Profile", value)
+            for role_row in role_profile.roles:
+                roles.append(role_row.role)
+        elif frappe.db.exists("Role", value):
+            # It's a direct Role
+            frappe.logger().debug(f"Adding direct Role: {value}")
+            roles.append(value)
+        else:
+            frappe.logger().warning(f"Mapped value '{value}' is neither a valid Role nor Role Profile, skipping.")
+    
+    # Remove duplicates while preserving order
+    roles = list(dict.fromkeys(roles))
+    frappe.logger().debug(f"Final Frappe roles for user {username}: {roles}")
 
     # The current roles of the user in Frappe.
     frappe.logger().debug(f"Current Frappe role docs of user {username}: {user.get('roles')}")
