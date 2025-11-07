@@ -141,43 +141,23 @@ def custom(code: str, state: str | dict):
         # Allows making changes on the user (like adding roles) by guest user.
         user.flags.ignore_permissions = True
 
-        default_role = oidc_extended_configuration.default_role
-        user.add_roles(default_role)
-
-    # Create Employee record if enabled and doesn't exist
-    if oidc_extended_configuration.auto_create_employee:
-        if not frappe.db.exists("Employee", {"user_id": user.name}):
-            frappe.logger().info(f"Creating Employee record for {username}")
-            
-            # Use defaults from configuration
-            gender = oidc_extended_configuration.default_gender or "Other"
-            date_of_birth = frappe.utils.today()
-            date_of_joining = frappe.utils.today()
-            
-            if not oidc_extended_configuration.default_company:
-                frappe.logger().warning(f"Cannot create Employee for {username}: default_company not configured")
+        # Add default role/role profile if configured
+        if oidc_extended_configuration.default_role:
+            default_role = oidc_extended_configuration.default_role
+            # Check if it's a Role Profile or direct Role
+            if frappe.db.exists("Role Profile", default_role):
+                frappe.logger().debug(f"Expanding default Role Profile: {default_role}")
+                role_profile = frappe.get_doc("Role Profile", default_role)
+                for role_row in role_profile.roles:
+                    user.add_roles(role_row.role)
+            elif frappe.db.exists("Role", default_role):
+                user.add_roles(default_role)
             else:
-                try:
-                    employee = frappe.get_doc({
-                        "doctype": "Employee",
-                        "first_name": first_name,
-                        "last_name": last_name,
-                        "gender": gender,
-                        "date_of_birth": date_of_birth,
-                        "date_of_joining": date_of_joining,
-                        "company": oidc_extended_configuration.default_company,
-                        "user_id": user.name,
-                        "status": "Active",
-                        "create_user_permission": 0
-                    })
-                    employee.flags.ignore_permissions = True
-                    employee.insert()
-                    frappe.logger().info(f"Employee {employee.name} created successfully for user {username}")
-                except Exception as e:
-                    frappe.logger().error(f"Failed to create Employee for {username}: {str(e)}")
-                    frappe.logger().exception(e)
-        else:
-            frappe.logger().debug(f"Employee record already exists for user {username}")
+                frappe.logger().warning(f"Default role '{default_role}' is neither a valid Role nor Role Profile")
+        
+        # Save new user to database so it has a valid user.name for Employee creation
+        user.insert()
+        frappe.logger().info(f"New user {username} inserted into database with name: {user.name}")
 
     if not user.enabled:
         frappe.logger().info(f"The user {username} is disabled.")
@@ -233,6 +213,41 @@ def custom(code: str, state: str | dict):
     user.add_roles(*roles_to_add)
 
     user.save()
+
+    # Create Employee record if enabled and doesn't exist (after user is saved to DB)
+    if oidc_extended_configuration.auto_create_employee:
+        if not frappe.db.exists("Employee", {"user_id": user.name}):
+            frappe.logger().info(f"Creating Employee record for {username}")
+            
+            # Use defaults from configuration
+            gender = oidc_extended_configuration.default_gender or "Other"
+            date_of_birth = frappe.utils.today()
+            date_of_joining = frappe.utils.today()
+            
+            if not oidc_extended_configuration.default_company:
+                frappe.logger().warning(f"Cannot create Employee for {username}: default_company not configured")
+            else:
+                try:
+                    employee = frappe.get_doc({
+                        "doctype": "Employee",
+                        "first_name": first_name,
+                        "last_name": last_name,
+                        "gender": gender,
+                        "date_of_birth": date_of_birth,
+                        "date_of_joining": date_of_joining,
+                        "company": oidc_extended_configuration.default_company,
+                        "user_id": user.name,
+                        "status": "Active",
+                        "create_user_permission": 0
+                    })
+                    employee.flags.ignore_permissions = True
+                    employee.insert()
+                    frappe.logger().info(f"Employee {employee.name} created successfully for user {username}")
+                except Exception as e:
+                    frappe.logger().error(f"Failed to create Employee for {username}: {str(e)}")
+                    frappe.logger().exception(e)
+        else:
+            frappe.logger().debug(f"Employee record already exists for user {username}")
 
     frappe.local.login_manager.user = user.name
     frappe.local.login_manager.post_login()

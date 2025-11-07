@@ -40,9 +40,9 @@
   },
   {
    "fieldname": "default_role",
-   "fieldtype": "Link",
-   "label": "Default Role",
-   "options": "Role"
+   "fieldtype": "Data",
+   "label": "Default Role or Role Profile",
+   "description": "Can be either a Role name or Role Profile name"
   },
    {
     "fieldname": "group_role_mappings",
