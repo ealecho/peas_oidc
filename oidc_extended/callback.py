@@ -144,6 +144,41 @@ def custom(code: str, state: str | dict):
         default_role = oidc_extended_configuration.default_role
         user.add_roles(default_role)
 
+    # Create Employee record if enabled and doesn't exist
+    if oidc_extended_configuration.auto_create_employee:
+        if not frappe.db.exists("Employee", {"user_id": user.name}):
+            frappe.logger().info(f"Creating Employee record for {username}")
+            
+            # Use defaults from configuration
+            gender = oidc_extended_configuration.default_gender or "Other"
+            date_of_birth = frappe.utils.today()
+            date_of_joining = frappe.utils.today()
+            
+            if not oidc_extended_configuration.default_company:
+                frappe.logger().warning(f"Cannot create Employee for {username}: default_company not configured")
+            else:
+                try:
+                    employee = frappe.get_doc({
+                        "doctype": "Employee",
+                        "first_name": first_name,
+                        "last_name": last_name,
+                        "gender": gender,
+                        "date_of_birth": date_of_birth,
+                        "date_of_joining": date_of_joining,
+                        "company": oidc_extended_configuration.default_company,
+                        "user_id": user.name,
+                        "status": "Active",
+                        "create_user_permission": 0
+                    })
+                    employee.flags.ignore_permissions = True
+                    employee.insert()
+                    frappe.logger().info(f"Employee {employee.name} created successfully for user {username}")
+                except Exception as e:
+                    frappe.logger().error(f"Failed to create Employee for {username}: {str(e)}")
+                    frappe.logger().exception(e)
+        else:
+            frappe.logger().debug(f"Employee record already exists for user {username}")
+
     if not user.enabled:
         frappe.logger().info(f"The user {username} is disabled.")
         frappe.respond_as_web_page(_("Not Allowed"), _("User {0} is disabled").format(user.username))

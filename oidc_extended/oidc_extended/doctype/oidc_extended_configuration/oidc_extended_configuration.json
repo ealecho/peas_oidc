@@ -16,7 +16,11 @@
   "groups_claim_name",
   "roles_section",
   "default_role",
-  "group_role_mappings"
+  "group_role_mappings",
+  "employee_section",
+  "auto_create_employee",
+  "default_company",
+  "default_gender"
  ],
  "fields": [
   {
@@ -79,6 +83,34 @@
   {
    "fieldname": "column_break_0",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "employee_section",
+   "fieldtype": "Section Break",
+   "label": "Employee Settings"
+  },
+  {
+   "fieldname": "auto_create_employee",
+   "fieldtype": "Check",
+   "label": "Auto Create Employee",
+   "default": 0,
+   "description": "Automatically create Employee record for new users with employee-related roles"
+  },
+  {
+   "fieldname": "default_company",
+   "fieldtype": "Link",
+   "label": "Default Company",
+   "options": "Company",
+   "depends_on": "auto_create_employee",
+   "mandatory_depends_on": "auto_create_employee"
+  },
+  {
+   "fieldname": "default_gender",
+   "fieldtype": "Select",
+   "label": "Default Gender",
+   "options": "Male\nFemale\nOther",
+   "default": "Other",
+   "depends_on": "auto_create_employee"
   }
  ],
  "links": [],
