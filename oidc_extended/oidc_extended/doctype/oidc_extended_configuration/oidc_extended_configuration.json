@@ -1,0 +1,110 @@
+{
+ "actions": [],
+ "autoname": "format:{provider}",
+ "creation": "2023-06-16 19:03:33.874968",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "provider",
+  "claims_section",
+  "given_name_claim_name",
+  "family_name_claim_name",
+  "column_break_0",
+  "email_claim_name",
+  "groups_claim_name",
+  "roles_section",
+  "default_role",
+  "group_role_mappings"
+ ],
+ "fields": [
+  {
+   "fieldname": "provider",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Social Login (OIDC) Provider",
+   "options": "Social Login Key",
+   "reqd": 1,
+   "set_only_once": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "roles_section",
+   "fieldtype": "Section Break",
+   "label": "Roles"
+  },
+  {
+   "fieldname": "default_role",
+   "fieldtype": "Link",
+   "label": "Default Role",
+   "options": "Role"
+  },
+  {
+   "fieldname": "group_role_mappings",
+   "fieldtype": "Table",
+   "label": "Group To Role Mappings",
+   "options": "OIDC Group To Role Mapping"
+  },
+  {
+   "default": "given_name",
+   "fieldname": "given_name_claim_name",
+   "fieldtype": "Data",
+   "label": "Given Name Claim"
+  },
+  {
+   "default": "family_name",
+   "fieldname": "family_name_claim_name",
+   "fieldtype": "Data",
+   "label": "Family Name Claim"
+  },
+  {
+   "default": "email",
+   "fieldname": "email_claim_name",
+   "fieldtype": "Data",
+   "label": "Email Claim"
+  },
+  {
+   "default": "groups",
+   "description": "The name of the claim that includes a list of user groups.",
+   "fieldname": "groups_claim_name",
+   "fieldtype": "Data",
+   "label": "Groups Claim"
+  },
+  {
+   "fieldname": "claims_section",
+   "fieldtype": "Section Break",
+   "label": "Token Claims"
+  },
+  {
+   "fieldname": "column_break_0",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "links": [],
+ "modified": "2023-06-17 11:12:05.250379",
+ "modified_by": "Administrator",
+ "module": "OIDC Extended",
+ "name": "OIDC Extended Configuration",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "provider",
+ "track_changes": 1
+}
