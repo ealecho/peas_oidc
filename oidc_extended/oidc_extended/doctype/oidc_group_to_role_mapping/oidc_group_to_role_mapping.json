@@ -5,16 +5,24 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "group_name",
   "group",
   "role"
  ],
  "fields": [
   {
-   "description": "A group that will be fetched from OIDC token to be mapped to a ERPNext user role.",
+   "description": "Human-readable group name for reference (optional).",
+   "fieldname": "group_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Group Name (Optional)"
+  },
+  {
+   "description": "Group Object ID from OIDC token to be mapped to a ERPNext user role.",
    "fieldname": "group",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Group",
+   "label": "Group Object ID",
    "reqd": 1
   },
    {
