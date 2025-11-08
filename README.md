@@ -9,7 +9,7 @@ Features:
 - Specify the default role for the users that haven't logged in yet.
 - Automatically creates users from trusted identity providers even if signup is disabled in the site.
 
-![image](https://github.com/MohammedNoureldin/frappe-oidc-extended/assets/14913147/e72cd642-efb5-4aab-a954-77c3744adab4)
+![image](screenshots/Screenshot%202025-11-08%20at%2003.56.24.png)
 
 #### *Social Login Key* Configuration
 
@@ -17,21 +17,21 @@ This app extends the functionality of Social Login Key, that is why it is import
 
 ```json
 {
-    "name": "keycloak",
+    "name": "microsoft",
     "enable_social_login": 1,
     "social_login_provider": "Custom",
-    "client_id": "erpnext",
-    "provider_name": "keycloak",
-    "client_secret": "{{ erpnext_idp_client_secret }}",
+    "client_id": "{{ client_id }}",
+    "provider_name": "microsoft",
+    "client_secret": "{{ client_secret }}",
     "icon": "",
-    "base_url": "https://idp.{{ domain_name }}/realms/{{ keycloak_realm }}",
-    "authorize_url": "/protocol/openid-connect/auth",
-    "access_token_url": "/protocol/openid-connect/token",
-    "redirect_url": "/api/method/oidc_extended.callback.custom/keycloak",
-    "api_endpoint": "https://idp.{{ domain_name }}/realms/{{ keycloak_realm }}/protocol/openid-connect/userinfo",
+    "base_url": "https://login.microsoftonline.com/{{ tenant_id }}",
+    "authorize_url": "/oauth2/v2.0/authorize",
+    "access_token_url": "/oauth2/v2.0/token",
+    "redirect_url": "/api/method/oidc_extended.callback.custom/microsoft",
+    "api_endpoint": "https://graph.microsoft.com/v1.0/me",
     "custom_base_url": 1,
     "auth_url_data": "{\"response_type\": \"code\", \"scope\": \"openid profile email\"}",
-    "user_id_property": "preferred_username",
+    "user_id_property": "userPrincipalName",
     "doctype": "Social Login Key"
 }
 ```
