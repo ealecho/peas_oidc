@@ -247,8 +247,8 @@ def custom(code: str, state: str | dict):
                     
                     # Add Employee Self Service role to user
                     if frappe.db.exists("Role", "Employee Self Service"):
+                        user.reload()  # Reload to get latest timestamp
                         user.add_roles("Employee Self Service")
-                        user.save()
                         frappe.logger().info(f"Added 'Employee Self Service' role to user {username}")
                 except Exception as e:
                     frappe.logger().error(f"Failed to create Employee for {username}: {str(e)}")
