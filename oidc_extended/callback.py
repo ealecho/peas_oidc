@@ -141,19 +141,16 @@ def custom(code: str, state: str | dict):
         # Allows making changes on the user (like adding roles) by guest user.
         user.flags.ignore_permissions = True
 
-        # Add default role/role profile if configured
+        # Add default role profile if configured
         if oidc_extended_configuration.default_role:
-            default_role = oidc_extended_configuration.default_role
-            # Check if it's a Role Profile or direct Role
-            if frappe.db.exists("Role Profile", default_role):
-                frappe.logger().debug(f"Expanding default Role Profile: {default_role}")
-                role_profile = frappe.get_doc("Role Profile", default_role)
+            default_role_profile = oidc_extended_configuration.default_role
+            if frappe.db.exists("Role Profile", default_role_profile):
+                frappe.logger().debug(f"Expanding default Role Profile: {default_role_profile}")
+                role_profile = frappe.get_doc("Role Profile", default_role_profile)
                 for role_row in role_profile.roles:
                     user.add_roles(role_row.role)
-            elif frappe.db.exists("Role", default_role):
-                user.add_roles(default_role)
             else:
-                frappe.logger().warning(f"Default role '{default_role}' is neither a valid Role nor Role Profile")
+                frappe.logger().warning(f"Default role profile '{default_role_profile}' not found")
         
         # Save new user to database so it has a valid user.name for Employee creation
         user.insert()
@@ -219,8 +216,12 @@ def custom(code: str, state: str | dict):
         if not frappe.db.exists("Employee", {"user_id": user.name}):
             frappe.logger().info(f"Creating Employee record for {username}")
             
-            # Use defaults from configuration
-            gender = oidc_extended_configuration.default_gender or "Other"
+            # Use defaults from configuration with Male failover
+            gender = oidc_extended_configuration.default_gender or "Male"
+            # Validate gender exists, fallback to Male
+            if not frappe.db.exists("Gender", gender):
+                frappe.logger().warning(f"Configured gender '{gender}' not found, using 'Male' as fallback")
+                gender = "Male"
             date_of_birth = frappe.utils.today()
             date_of_joining = frappe.utils.today()
             
@@ -243,6 +244,12 @@ def custom(code: str, state: str | dict):
                     employee.flags.ignore_permissions = True
                     employee.insert()
                     frappe.logger().info(f"Employee {employee.name} created successfully for user {username}")
+                    
+                    # Add Employee Self Service role to user
+                    if frappe.db.exists("Role", "Employee Self Service"):
+                        user.add_roles("Employee Self Service")
+                        user.save()
+                        frappe.logger().info(f"Added 'Employee Self Service' role to user {username}")
                 except Exception as e:
                     frappe.logger().error(f"Failed to create Employee for {username}: {str(e)}")
                     frappe.logger().exception(e)

@@ -38,12 +38,13 @@
    "fieldtype": "Section Break",
    "label": "Roles"
   },
-  {
-   "fieldname": "default_role",
-   "fieldtype": "Data",
-   "label": "Default Role or Role Profile",
-   "description": "Can be either a Role name or Role Profile name"
-  },
+   {
+    "fieldname": "default_role",
+    "fieldtype": "Link",
+    "label": "Default Role Profile",
+    "options": "Role Profile",
+    "description": "Select a Role Profile to assign to new users by default"
+   },
    {
     "fieldname": "group_role_mappings",
     "fieldtype": "Table",
