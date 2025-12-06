@@ -261,59 +261,108 @@ def custom(code: str, state: str | dict):
     # Map groups to roles/role profiles for user
     frappe.logger().debug(f"Mapping groups to roles for user {username}.")
     
-    # Collect mapped values (can be either Role or Role Profile names)
-    mapped_values = [group_role_mapping.role for group_role_mapping in oidc_extended_configuration.group_role_mappings if group_role_mapping.group in groups]
-    frappe.logger().debug(f"Mapped values from token groups of user {username}: {mapped_values}")
+    # Build protected roles set - always include "Employee Self Service" plus any configured protected roles
+    protected_roles = {"Employee Self Service"}
+    if hasattr(oidc_extended_configuration, 'protected_roles') and oidc_extended_configuration.protected_roles:
+        for pr in oidc_extended_configuration.protected_roles:
+            protected_roles.add(pr.role)
+    frappe.logger().debug(f"Protected roles: {protected_roles}")
     
-    # Check if any mapped value is a Role Profile
-    role_profile_name = None
-    direct_roles = []
+    # Check if role sync is enabled
+    enable_role_sync = getattr(oidc_extended_configuration, 'enable_role_sync', False)
     
-    for value in mapped_values:
-        if frappe.db.exists("Role Profile", value):
-            if role_profile_name is None:
-                role_profile_name = value
-                frappe.logger().debug(f"Will set Role Profile: {value}")
+    if not enable_role_sync:
+        # Role sync disabled - only apply default Role Profile to users without one
+        user.reload()
+        default_role_profile = oidc_extended_configuration.default_role
+        
+        if not user.role_profile_name and default_role_profile:
+            if frappe.db.exists("Role Profile", default_role_profile):
+                user.role_profile_name = default_role_profile
+                frappe.logger().info(f"Applied default role profile '{default_role_profile}' for user {username} (role sync disabled)")
             else:
-                frappe.logger().warning(f"Multiple Role Profiles mapped for user {username}. Using first: {role_profile_name}, ignoring: {value}")
-        elif frappe.db.exists("Role", value):
-            direct_roles.append(value)
-            frappe.logger().debug(f"Will add direct Role: {value}")
+                frappe.logger().warning(f"Default role profile '{default_role_profile}' not found")
         else:
-            frappe.logger().warning(f"Mapped value '{value}' is neither a valid Role nor Role Profile, skipping.")
-    
-    # Set Role Profile if found
-    user.reload()
-    if role_profile_name:
-        user.role_profile_name = role_profile_name
-        frappe.logger().info(f"Set role profile '{role_profile_name}' for user {username}")
+            frappe.logger().debug(f"Role sync disabled, preserving existing role profile for user {username}: {user.role_profile_name}")
     else:
-        # Clear role profile if no longer mapped
-        if user.role_profile_name:
-            frappe.logger().info(f"Clearing role profile for user {username}")
-            user.role_profile_name = None
-    
-    # Get roles from role profile (if set) and add direct roles
-    roles_from_profile = []
-    if role_profile_name:
-        role_profile_doc = frappe.get_doc("Role Profile", role_profile_name)
-        roles_from_profile = [role_row.role for role_row in role_profile_doc.roles]
-    
-    # Combine roles from profile and direct roles
-    all_roles = list(dict.fromkeys(roles_from_profile + direct_roles))
-    frappe.logger().debug(f"Final roles for user {username}: {all_roles}")
-    
-    # Sync user roles
-    current_roles = {doc.role for doc in user.get("roles")}
-    frappe.logger().debug(f"Current roles of user {username}: {current_roles}")
-    
-    roles_to_remove = [role for role in current_roles if role not in all_roles]
-    frappe.logger().debug(f"Roles to remove from user {username}: {roles_to_remove}")
-    user.remove_roles(*roles_to_remove)
-    
-    roles_to_add = [role for role in all_roles if role not in current_roles]
-    frappe.logger().debug(f"Roles to add to user {username}: {roles_to_add}")
-    user.add_roles(*roles_to_add)
+        # Role sync enabled - process group mappings
+        frappe.logger().debug(f"Role sync enabled, processing group mappings for user {username}.")
+        
+        # Collect mapped values (can be either Role or Role Profile names)
+        mapped_values = [group_role_mapping.role for group_role_mapping in oidc_extended_configuration.group_role_mappings if group_role_mapping.group in groups]
+        frappe.logger().debug(f"Mapped values from token groups of user {username}: {mapped_values}")
+        
+        # Check if any mapped value is a Role Profile
+        role_profile_name = None
+        direct_roles = []
+        
+        for value in mapped_values:
+            if frappe.db.exists("Role Profile", value):
+                if role_profile_name is None:
+                    role_profile_name = value
+                    frappe.logger().debug(f"Will set Role Profile: {value}")
+                else:
+                    frappe.logger().warning(f"Multiple Role Profiles mapped for user {username}. Using first: {role_profile_name}, ignoring: {value}")
+            elif frappe.db.exists("Role", value):
+                direct_roles.append(value)
+                frappe.logger().debug(f"Will add direct Role: {value}")
+            else:
+                frappe.logger().warning(f"Mapped value '{value}' is neither a valid Role nor Role Profile, skipping.")
+        
+        has_group_mappings = len(mapped_values) > 0
+        
+        user.reload()
+        
+        if has_group_mappings:
+            # Groups were mapped - apply the mapped Role Profile and roles
+            if role_profile_name:
+                user.role_profile_name = role_profile_name
+                frappe.logger().info(f"Set role profile '{role_profile_name}' for user {username} (from group mapping)")
+            else:
+                # Mapped values are all direct roles, no Role Profile mapped - keep existing
+                frappe.logger().debug(f"No Role Profile in mappings, keeping existing: {user.role_profile_name}")
+            
+            # Get roles from role profile (if set) and add direct roles
+            roles_from_profile = []
+            if user.role_profile_name:
+                role_profile_doc = frappe.get_doc("Role Profile", user.role_profile_name)
+                roles_from_profile = [role_row.role for role_row in role_profile_doc.roles]
+            
+            # Combine roles from profile and direct roles
+            all_roles = set(roles_from_profile + direct_roles)
+            frappe.logger().debug(f"Roles from mappings for user {username}: {all_roles}")
+            
+            # Sync user roles (respecting protected roles)
+            current_roles = {doc.role for doc in user.get("roles")}
+            frappe.logger().debug(f"Current roles of user {username}: {current_roles}")
+            
+            # Remove roles that are not in all_roles AND are not protected
+            roles_to_remove = [role for role in current_roles if role not in all_roles and role not in protected_roles]
+            frappe.logger().debug(f"Roles to remove from user {username}: {roles_to_remove}")
+            if roles_to_remove:
+                user.remove_roles(*roles_to_remove)
+            
+            roles_to_add = [role for role in all_roles if role not in current_roles]
+            frappe.logger().debug(f"Roles to add to user {username}: {roles_to_add}")
+            if roles_to_add:
+                user.add_roles(*roles_to_add)
+        else:
+            # No groups mapped - use default Role Profile or preserve existing
+            default_role_profile = oidc_extended_configuration.default_role
+            
+            if not user.role_profile_name and default_role_profile:
+                # User has no Role Profile, apply default
+                if frappe.db.exists("Role Profile", default_role_profile):
+                    user.role_profile_name = default_role_profile
+                    frappe.logger().info(f"Applied default role profile '{default_role_profile}' for user {username} (no groups mapped)")
+                else:
+                    frappe.logger().warning(f"Default role profile '{default_role_profile}' not found")
+            else:
+                # User already has a Role Profile or no default configured - preserve existing
+                frappe.logger().info(f"No groups mapped for user {username}, preserving existing role profile: {user.role_profile_name}")
+            
+            # Don't remove any roles when no mappings exist
+            frappe.logger().debug(f"Skipping role removal for user {username} (no group mappings)")
 
     user.save()
 

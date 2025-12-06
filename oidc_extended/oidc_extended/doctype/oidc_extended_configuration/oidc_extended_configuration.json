@@ -16,7 +16,9 @@
   "groups_claim_name",
   "roles_section",
   "default_role",
+  "enable_role_sync",
   "group_role_mappings",
+  "protected_roles",
   "employee_section",
   "auto_create_employee",
   "default_company",
@@ -38,19 +40,35 @@
    "fieldtype": "Section Break",
    "label": "Roles"
   },
-   {
-    "fieldname": "default_role",
-    "fieldtype": "Link",
-    "label": "Default Role Profile",
-    "options": "Role Profile",
-    "description": "Select a Role Profile to assign to new users by default"
-   },
-   {
-    "fieldname": "group_role_mappings",
-    "fieldtype": "Table",
-    "label": "Group To Role/Role Profile Mappings",
-    "options": "OIDC Group To Role Mapping"
-   },
+  {
+   "fieldname": "default_role",
+   "fieldtype": "Link",
+   "label": "Default Role Profile",
+   "options": "Role Profile",
+   "description": "Role Profile to assign when no OIDC groups are mapped. Applied to new users and existing users without a Role Profile."
+  },
+  {
+   "fieldname": "enable_role_sync",
+   "fieldtype": "Check",
+   "label": "Enable Role Sync from Groups",
+   "default": 0,
+   "description": "When enabled, user roles will be synchronized based on OIDC group mappings. When disabled, only the default Role Profile is applied to new users."
+  },
+  {
+   "fieldname": "group_role_mappings",
+   "fieldtype": "Table",
+   "label": "Group To Role/Role Profile Mappings",
+   "options": "OIDC Group To Role Mapping",
+   "depends_on": "enable_role_sync"
+  },
+  {
+   "fieldname": "protected_roles",
+   "fieldtype": "Table",
+   "label": "Protected Roles",
+   "options": "OIDC Protected Role",
+   "description": "Roles listed here will never be removed during OIDC role sync. 'Employee Self Service' is always protected automatically.",
+   "depends_on": "enable_role_sync"
+  },
   {
    "default": "given_name",
    "fieldname": "given_name_claim_name",
@@ -115,7 +133,7 @@
   }
  ],
  "links": [],
- "modified": "2023-06-17 11:12:05.250379",
+ "modified": "2025-12-06 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "OIDC Extended",
  "name": "OIDC Extended Configuration",
